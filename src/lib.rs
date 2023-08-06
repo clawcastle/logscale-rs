@@ -1,9 +1,9 @@
-use std::{collections::HashMap, error::Error, fmt, path::Display, string::ParseError};
+use std::{collections::HashMap, error::Error};
 
 use reqwest::{Client, StatusCode};
 use serde::Serialize;
 
-struct LogScaleClient {
+pub struct LogScaleClient {
     logscale_url: reqwest::Url,
     ingest_token: &'static str,
     http_client: Client,
@@ -25,7 +25,7 @@ impl LogScaleClient {
         })
     }
 
-    async fn ingest_structured(
+    pub async fn ingest_structured(
         &self,
         request: &[StructuredLogsIngestRequest],
     ) -> Result<(), IngestStructuredDataError> {
@@ -60,18 +60,18 @@ impl LogScaleClient {
 }
 
 #[derive(Serialize)]
-struct StructuredLogsIngestRequest {
+pub struct StructuredLogsIngestRequest {
     tags: HashMap<String, String>,
     events: Vec<StructuredLogEvent>,
 }
 
 #[derive(Serialize)]
-struct StructuredLogEvent {
+pub struct StructuredLogEvent {
     timestamp: String,
     attributes: HashMap<String, String>,
 }
 
-enum IngestStructuredDataError {
+pub enum IngestStructuredDataError {
     FailedSendingRequest,
     RequestStatusCodeDidNotIndicateSuccess(StatusCode),
 }
