@@ -2,15 +2,16 @@ extern crate tokio;
 
 use std::{collections::HashMap, env, vec};
 
-use logscale_rs::{LogScaleClient, StructuredLogEvent, StructuredLogsIngestRequest};
+use logscale_rs::{
+    client::LogScaleClient,
+    models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest},
+};
 
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
 
-    dbg!(&args);
     let ingest_token = args[1].replace("--ingest-token=", "");
-    println!("{}", &ingest_token);
 
     let logscale_client =
         LogScaleClient::from_url("https://cloud.community.humio.com", &ingest_token).unwrap();
