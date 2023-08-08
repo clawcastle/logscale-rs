@@ -1,6 +1,11 @@
 extern crate tokio;
 
-use std::{collections::HashMap, env, vec};
+use std::{
+    collections::HashMap,
+    env,
+    time::{SystemTime, UNIX_EPOCH},
+    vec,
+};
 
 use logscale_rs::{
     client::LogScaleClient,
@@ -11,13 +16,21 @@ use logscale_rs::{
 async fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let ingest_token = args[1].replace("--ingest-token=", "");
+    let ingest_token = args
+        .get(1)
+        .expect("Missing '--ingest-token' parameter.")
+        .replace("--ingest-token=", "");
 
     let logscale_client =
         LogScaleClient::from_url("https://cloud.community.humio.com", &ingest_token).unwrap();
 
+    let now_unix_timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
     let events: Vec<StructuredLogEvent> = vec![StructuredLogEvent {
-        timestamp: "2023-08-06T12:00:00+02:00".to_string(),
+        timestamp: now_unix_timestamp,
         attributes: HashMap::new(),
     }];
 

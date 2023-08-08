@@ -11,7 +11,7 @@ pub struct StructuredLogsIngestRequest<'a> {
 
 #[derive(Serialize)]
 pub struct StructuredLogEvent {
-    pub timestamp: String,
+    pub timestamp: u128,
     pub attributes: HashMap<String, String>,
 }
 
