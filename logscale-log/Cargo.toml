@@ -6,5 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4.19"
+log = {version = "0.4.19", features = ["std", "kv_unstable_serde"]}
 logscale-rs = {path = "../logscale-rs"}
+structured-logger = "1.0.3"
+
+[[example]]
+name = "log_simple"
+path = "examples/log_simple.rs"

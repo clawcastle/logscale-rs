@@ -13,5 +13,5 @@ serde = { version = "1.0.182", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 
 [[example]]
-name = "ingest-structured"
-path = "examples/ingest-structured.rs"
+name = "ingest_structured"
+path = "examples/ingest_structured.rs"
