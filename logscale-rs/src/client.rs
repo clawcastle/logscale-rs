@@ -4,25 +4,22 @@ use reqwest::{Client, StatusCode, Url};
 
 use crate::models::structured_data::{IngestStructuredDataError, StructuredLogsIngestRequest};
 
-pub struct LogScaleClient<'a> {
+pub struct LogScaleClient {
     logscale_url: Url,
-    ingest_token: &'a str,
+    ingest_token: String,
     http_client: Client,
     ingest_token_header_value: String,
 }
 
-impl<'a> LogScaleClient<'a> {
-    pub fn from_url(
-        logscale_url: &'static str,
-        ingest_token: &'a str,
-    ) -> Result<Self, Box<dyn Error>> {
-        let url = Url::parse(logscale_url)?;
+impl LogScaleClient {
+    pub fn from_url(logscale_url: String, ingest_token: String) -> Result<Self, Box<dyn Error>> {
+        let url = Url::parse(&logscale_url)?;
 
         Ok(Self {
             logscale_url: url,
-            ingest_token,
+            ingest_token: ingest_token.clone(),
             http_client: Client::default(),
-            ingest_token_header_value: format!("Bearer {}", ingest_token),
+            ingest_token_header_value: format!("Bearer {}", &ingest_token),
         })
     }
 
