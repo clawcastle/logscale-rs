@@ -6,13 +6,13 @@ use serde::Serialize;
 #[derive(Serialize)]
 pub struct StructuredLogsIngestRequest<'a> {
     pub tags: HashMap<String, String>,
-    pub events: &'a [StructuredLogEvent<'a>],
+    pub events: &'a [StructuredLogEvent],
 }
 
-#[derive(Serialize)]
-pub struct StructuredLogEvent<'a> {
+#[derive(Serialize, Clone)]
+pub struct StructuredLogEvent {
     pub timestamp: u128,
-    pub attributes: HashMap<&'a str, &'a str>,
+    pub attributes: HashMap<String, String>,
 }
 
 #[derive(Debug)]

@@ -12,8 +12,8 @@ pub struct LogScaleClient {
 }
 
 impl LogScaleClient {
-    pub fn from_url(logscale_url: String, ingest_token: String) -> Result<Self, Box<dyn Error>> {
-        let url = Url::parse(&logscale_url)?;
+    pub fn from_url(logscale_url: &str, ingest_token: String) -> Result<Self, Box<dyn Error>> {
+        let url = Url::parse(logscale_url)?;
 
         Ok(Self {
             logscale_url: url,

@@ -22,7 +22,7 @@ async fn main() {
         .replace("--ingest-token=", "");
 
     let logscale_client =
-        LogScaleClient::from_url("https://cloud.community.humio.com", &ingest_token).unwrap();
+        LogScaleClient::from_url("https://cloud.community.humio.com", ingest_token).unwrap();
 
     let now_unix_timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)

@@ -1,25 +1,24 @@
 use std::{
+    cell::RefCell,
     collections::HashMap,
     error::Error,
-    future,
     sync::Mutex,
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use logscale_rs::{
-    client::LogScaleClient,
-    models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest},
-};
+use logscale_rs::{client::LogScaleClient, models::structured_data::StructuredLogEvent};
 use structured_logger::{Builder, Writer};
 
+use crate::log_events_cache::LogsEventCache;
+
 pub struct LogScaleLogger {
-    client: Mutex<LogScaleClient>,
+    client: LogScaleClient,
+    log_events_cache: Mutex<RefCell<LogsEventCache>>,
 }
 
 impl LogScaleLogger {
     pub fn init(url: String, ingest_token: String) -> Result<(), Box<dyn Error>> {
-        let logscale_logger =
-            LogScaleLogger::create("https://cloud.community.humio.com", &ingest_token)?;
+        let logscale_logger = LogScaleLogger::create(&url, &ingest_token)?;
 
         Builder::new()
             .with_default_writer(Box::from(logscale_logger))
@@ -29,10 +28,11 @@ impl LogScaleLogger {
     }
 
     pub fn create(url: &str, ingest_token: &str) -> Result<Self, Box<dyn Error>> {
-        let client = LogScaleClient::from_url(String::from(url), String::from(ingest_token))?;
+        let client = LogScaleClient::from_url(url, String::from(ingest_token))?;
 
         Ok(Self {
-            client: Mutex::new(client),
+            client,
+            log_events_cache: Mutex::from(RefCell::new(LogsEventCache::new())),
         })
     }
 }
@@ -45,8 +45,7 @@ impl Writer for LogScaleLogger {
         let mut attributes = HashMap::with_capacity(value.len());
 
         for (key, val) in value {
-            let val = val.to_borrowed_str().unwrap_or_default();
-            attributes.insert(key.as_str(), val);
+            attributes.insert(key.to_string(), val.to_string());
         }
 
         println!("{:?}", &attributes);
@@ -58,14 +57,15 @@ impl Writer for LogScaleLogger {
 
         let log_event = StructuredLogEvent {
             timestamp: now_unix_timestamp,
-            attributes,
+            attributes: attributes.clone(),
         };
 
-        let request = StructuredLogsIngestRequest {
-            tags: HashMap::new(),
-            events: &[log_event],
-        };
+        if let Ok(mut cache) = self.log_events_cache.lock() {
+            let cache = cache.get_mut();
 
-        todo!()
+            cache.add_log_event(log_event);
+        }
+
+        Ok(())
     }
 }

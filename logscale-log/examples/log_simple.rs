@@ -1,7 +1,7 @@
 use std::env;
 
 use log::info;
-use logscale_log::logscale_structured_writer::LogScaleLogger;
+use logscale_log::logscale_logger::LogScaleLogger;
 use structured_logger::Builder;
 fn main() {
     let args: Vec<String> = env::args().collect();
