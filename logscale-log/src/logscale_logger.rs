@@ -2,18 +2,21 @@ use std::{
     cell::RefCell,
     collections::HashMap,
     error::Error,
-    sync::Mutex,
-    time::{SystemTime, UNIX_EPOCH},
+    sync::{Arc, Mutex},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use logscale_rs::{client::LogScaleClient, models::structured_data::StructuredLogEvent};
+use logscale_rs::{
+    client::LogScaleClient,
+    models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest},
+};
 use structured_logger::{Builder, Writer};
 
 use crate::log_events_cache::LogsEventCache;
 
 pub struct LogScaleLogger {
     client: LogScaleClient,
-    log_events_cache: Mutex<RefCell<LogsEventCache>>,
+    log_events_cache: Arc<Mutex<RefCell<LogsEventCache>>>,
 }
 
 impl LogScaleLogger {
@@ -32,8 +35,31 @@ impl LogScaleLogger {
 
         Ok(Self {
             client,
-            log_events_cache: Mutex::from(RefCell::new(LogsEventCache::new())),
+            log_events_cache: Arc::from(Mutex::from(RefCell::new(LogsEventCache::new()))),
         })
+    }
+
+    async fn flush_log_events(client: LogScaleClient, cache: Arc<Mutex<RefCell<LogsEventCache>>>) {
+        if let Ok(mut cache) = cache.lock() {
+            let c = cache.get_mut();
+
+            if c.is_empty() {
+                return;
+            }
+
+            let events = c.get_log_events();
+
+            if (client
+                .ingest_structured(&[StructuredLogsIngestRequest {
+                    tags: HashMap::new(),
+                    events: &events,
+                }])
+                .await)
+                .is_ok()
+            {
+                c.clear();
+            }
+        }
     }
 }
 

@@ -4,6 +4,7 @@ use reqwest::{Client, StatusCode, Url};
 
 use crate::models::structured_data::{IngestStructuredDataError, StructuredLogsIngestRequest};
 
+#[derive(Clone)]
 pub struct LogScaleClient {
     logscale_url: Url,
     ingest_token: String,
@@ -56,3 +57,6 @@ impl LogScaleClient {
         }
     }
 }
+
+unsafe impl Send for LogScaleClient {}
+unsafe impl Sync for LogScaleClient {}
