@@ -23,6 +23,8 @@ impl LogScaleLogger {
     pub fn init(url: String, ingest_token: String) -> Result<(), Box<dyn Error>> {
         let logscale_logger = LogScaleLogger::create(&url, &ingest_token)?;
 
+        logscale_logger.start();
+
         Builder::new()
             .with_default_writer(Box::from(logscale_logger))
             .init();
@@ -39,28 +41,54 @@ impl LogScaleLogger {
         })
     }
 
-    async fn flush_log_events(client: LogScaleClient, cache: Arc<Mutex<RefCell<LogsEventCache>>>) {
-        if let Ok(mut cache) = cache.lock() {
-            let c = cache.get_mut();
+    fn start(&self) {
+        let cloned_client = self.client.clone();
+        let cloned_cache = Arc::clone(&self.log_events_cache);
 
-            if c.is_empty() {
-                return;
+        start_background_task(&cloned_client, cloned_cache);
+    }
+}
+
+fn start_background_task(
+    logscale_client: &LogScaleClient,
+    cache: Arc<Mutex<RefCell<LogsEventCache>>>,
+) {
+    let cloned_client = logscale_client.clone();
+
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+
+        loop {
+            interval.tick().await;
+
+            let mut events: Vec<StructuredLogEvent> = Vec::new();
+
+            {
+                if let Ok(c) = cache.lock() {
+                    let c = c.try_borrow().unwrap();
+                    if c.is_empty() {
+                        continue;
+                    }
+
+                    events = c.get_log_events();
+                }
             }
 
-            let events = c.get_log_events();
-
-            if (client
+            if cloned_client
                 .ingest_structured(&[StructuredLogsIngestRequest {
                     tags: HashMap::new(),
                     events: &events,
                 }])
-                .await)
+                .await
                 .is_ok()
             {
-                c.clear();
+                if let Ok(mut c) = cache.lock() {
+                    let c = c.get_mut();
+                    c.clear();
+                }
             }
         }
-    }
+    });
 }
 
 impl Writer for LogScaleLogger {
