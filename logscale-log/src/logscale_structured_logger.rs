@@ -3,25 +3,22 @@ use std::{
     collections::HashMap,
     error::Error,
     sync::{Arc, Mutex},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
-use logscale_rs::{
-    client::LogScaleClient,
-    models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest},
-};
+use logscale_rs::{client::LogScaleClient, models::structured_data::StructuredLogEvent};
 use structured_logger::{Builder, Writer};
 
-use crate::log_events_cache::LogsEventCache;
+use crate::{ingest_job::start_background_ingest_job, log_events_cache::LogsEventCache};
 
-pub struct LogScaleLogger {
+pub struct LogScaleStructuredLogger {
     client: LogScaleClient,
     log_events_cache: Arc<Mutex<RefCell<LogsEventCache>>>,
 }
 
-impl LogScaleLogger {
+impl LogScaleStructuredLogger {
     pub fn init(url: String, ingest_token: String) -> Result<(), Box<dyn Error>> {
-        let logscale_logger = LogScaleLogger::create(&url, &ingest_token)?;
+        let logscale_logger = LogScaleStructuredLogger::create(&url, &ingest_token)?;
 
         logscale_logger.start();
 
@@ -45,53 +42,11 @@ impl LogScaleLogger {
         let cloned_client = self.client.clone();
         let cloned_cache = Arc::clone(&self.log_events_cache);
 
-        start_background_task(&cloned_client, cloned_cache);
+        start_background_ingest_job(&cloned_client, cloned_cache);
     }
 }
 
-fn start_background_task(
-    logscale_client: &LogScaleClient,
-    cache: Arc<Mutex<RefCell<LogsEventCache>>>,
-) {
-    let cloned_client = logscale_client.clone();
-
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(5));
-
-        loop {
-            interval.tick().await;
-
-            let mut events: Vec<StructuredLogEvent> = Vec::new();
-
-            {
-                if let Ok(c) = cache.lock() {
-                    let c = c.try_borrow().unwrap();
-                    if c.is_empty() {
-                        continue;
-                    }
-
-                    events = c.get_log_events();
-                }
-            }
-
-            if cloned_client
-                .ingest_structured(&[StructuredLogsIngestRequest {
-                    tags: HashMap::new(),
-                    events: &events,
-                }])
-                .await
-                .is_ok()
-            {
-                if let Ok(mut c) = cache.lock() {
-                    let c = c.get_mut();
-                    c.clear();
-                }
-            }
-        }
-    });
-}
-
-impl Writer for LogScaleLogger {
+impl Writer for LogScaleStructuredLogger {
     fn write_log(
         &self,
         value: &std::collections::BTreeMap<log::kv::Key, log::kv::Value>,
@@ -101,8 +56,6 @@ impl Writer for LogScaleLogger {
         for (key, val) in value {
             attributes.insert(key.to_string(), val.to_string());
         }
-
-        println!("{:?}", &attributes);
 
         let now_unix_timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
