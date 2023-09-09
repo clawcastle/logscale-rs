@@ -25,7 +25,7 @@ async fn main() {
 
     // Loop to let the background sync task have time to do its thing.
     loop {
-        info!(param = format!("{}", count); "Log with count parameter");
+        info!(count = format!("{}", count); "Log with count parameter");
         count += 1;
         std::thread::sleep(Duration::from_secs(1));
     }
