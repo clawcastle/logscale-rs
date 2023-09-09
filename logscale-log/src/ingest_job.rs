@@ -21,6 +21,8 @@ pub fn start_background_ingest_job(
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
 
+        interval.tick().await;
+
         loop {
             interval.tick().await;
 
