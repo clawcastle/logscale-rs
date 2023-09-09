@@ -19,7 +19,13 @@ pub enum StructuredLoggerIngestPolicy {
 
 #[derive(Clone, Copy)]
 pub struct StructuredLoggerOptions {
-    ingest_policy: StructuredLoggerIngestPolicy
+    pub ingest_policy: StructuredLoggerIngestPolicy
+}
+
+impl StructuredLoggerOptions {
+    pub fn new(ingest_policy: StructuredLoggerIngestPolicy) -> Self {
+        Self { ingest_policy }
+    }
 }
 
 impl Default for StructuredLoggerOptions {
