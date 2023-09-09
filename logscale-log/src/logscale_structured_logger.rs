@@ -92,7 +92,7 @@ impl Writer for LogScaleStructuredLogger {
 
         let log_event = StructuredLogEvent {
             timestamp: now_unix_timestamp,
-            attributes: attributes.clone(),
+            attributes,
         };
 
         match self.options.ingest_policy {

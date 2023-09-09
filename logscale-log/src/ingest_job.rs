@@ -31,12 +31,13 @@ pub fn start_background_ingest_job(
 
             {
                 if let Ok(c) = cache.lock() {
-                    let c = c.try_borrow().unwrap();
-                    if c.is_empty() {
-                        continue;
+                    if let Ok(c) = c.try_borrow() {
+                        if c.is_empty() {
+                            continue;
+                        }
+    
+                        events = c.get_log_events();
                     }
-
-                    events = c.get_log_events();
                 }
             }
 
