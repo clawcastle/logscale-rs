@@ -6,7 +6,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH, Duration},
 };
 
-use logscale_rs::{client::LogScaleClient, models::structured_data::StructuredLogEvent};
+use logscale_rs::{client::LogScaleClient, models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest}};
 use structured_logger::{Builder, Writer};
 
 use crate::{ingest_job::start_background_ingest_job, log_events_cache::LogsEventCache};
@@ -95,10 +95,25 @@ impl Writer for LogScaleStructuredLogger {
             attributes: attributes.clone(),
         };
 
-        if let Ok(mut cache) = self.log_events_cache.lock() {
-            let cache = cache.get_mut();
+        match self.options.ingest_policy {
+            StructuredLoggerIngestPolicy::Immediately => {
+                let events = [log_event.clone()];
+                let client = self.client.clone();
 
-            cache.add_log_event(log_event);
+                tokio::spawn(async move {
+                    let _ = client.ingest_structured(&[StructuredLogsIngestRequest {
+                        tags: HashMap::new(),
+                        events: &events,
+                    }]).await;
+                });
+            }
+            StructuredLoggerIngestPolicy::Periodically(_) => {
+                if let Ok(mut cache) = self.log_events_cache.lock() {
+                    let cache = cache.get_mut();
+        
+                    cache.add_log_event(log_event);
+                }
+            },
         }
 
         Ok(())
