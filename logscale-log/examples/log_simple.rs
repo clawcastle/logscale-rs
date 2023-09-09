@@ -1,7 +1,7 @@
 use std::{env, time::Duration};
 
 use log::info;
-use logscale_log::logscale_structured_logger::LogScaleStructuredLogger;
+use logscale_log::logscale_structured_logger::{LogScaleStructuredLogger, StructuredLoggerOptions};
 
 #[tokio::main]
 async fn main() {
@@ -15,16 +15,18 @@ async fn main() {
     LogScaleStructuredLogger::init(
         String::from("https://cloud.community.humio.com"),
         ingest_token,
+        StructuredLoggerOptions::default()
     )
     .unwrap();
 
     log::set_max_level(log::LevelFilter::Trace);
 
-    let param = 42;
-    info!(param = format!("{}", param); "Log with param");
+    let mut count = 0;
 
     // Loop to let the background sync task have time to do its thing.
     loop {
-        std::thread::sleep(Duration::from_secs(5));
+        info!(param = format!("{}", count); "Log with count parameter");
+        count += 1;
+        std::thread::sleep(Duration::from_secs(1));
     }
 }

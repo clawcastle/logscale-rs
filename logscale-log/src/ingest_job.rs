@@ -13,13 +13,14 @@ use logscale_rs::{
 use crate::log_events_cache::LogsEventCache;
 
 pub fn start_background_ingest_job(
+    duration: Duration,
     logscale_client: &LogScaleClient,
     cache: Arc<Mutex<RefCell<LogsEventCache>>>,
 ) {
     let cloned_client = logscale_client.clone();
 
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        let mut interval = tokio::time::interval(duration);
 
         interval.tick().await;
 

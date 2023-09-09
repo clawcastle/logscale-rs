@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
     error::Error,
     sync::{Arc, Mutex},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH, Duration},
 };
 
 use logscale_rs::{client::LogScaleClient, models::structured_data::StructuredLogEvent};
@@ -11,16 +11,37 @@ use structured_logger::{Builder, Writer};
 
 use crate::{ingest_job::start_background_ingest_job, log_events_cache::LogsEventCache};
 
+#[derive(Clone, Copy)]
+pub enum StructuredLoggerIngestPolicy {
+    Immediately,
+    Periodically(Duration)
+}
+
+#[derive(Clone, Copy)]
+pub struct StructuredLoggerOptions {
+    ingest_policy: StructuredLoggerIngestPolicy
+}
+
+impl Default for StructuredLoggerOptions {
+    fn default() -> Self {
+        Self { ingest_policy: StructuredLoggerIngestPolicy::Periodically(Duration::from_secs(5)) }
+    }
+}
+
 pub struct LogScaleStructuredLogger {
     client: LogScaleClient,
+    options: StructuredLoggerOptions,
     log_events_cache: Arc<Mutex<RefCell<LogsEventCache>>>,
 }
 
 impl LogScaleStructuredLogger {
-    pub fn init(url: String, ingest_token: String) -> Result<(), Box<dyn Error>> {
-        let logscale_logger = LogScaleStructuredLogger::create(&url, &ingest_token)?;
+    pub fn init(url: String, ingest_token: String, options: StructuredLoggerOptions) -> Result<(), Box<dyn Error>> {
+        let logscale_logger = LogScaleStructuredLogger::create(&url, &ingest_token, options)?;
 
-        logscale_logger.start();
+
+        if let StructuredLoggerIngestPolicy::Periodically(duration) = logscale_logger.options.ingest_policy {
+            logscale_logger.start_periodic_sync(duration);
+        }
 
         Builder::new()
             .with_default_writer(Box::from(logscale_logger))
@@ -29,20 +50,21 @@ impl LogScaleStructuredLogger {
         Ok(())
     }
 
-    pub fn create(url: &str, ingest_token: &str) -> Result<Self, Box<dyn Error>> {
+    fn create(url: &str, ingest_token: &str, options: StructuredLoggerOptions) -> Result<Self, Box<dyn Error>> {
         let client = LogScaleClient::from_url(url, String::from(ingest_token))?;
 
         Ok(Self {
             client,
+            options,
             log_events_cache: Arc::from(Mutex::from(RefCell::new(LogsEventCache::new()))),
         })
     }
 
-    fn start(&self) {
+    fn start_periodic_sync(&self, duration: Duration) {
         let cloned_client = self.client.clone();
         let cloned_cache = Arc::clone(&self.log_events_cache);
 
-        start_background_ingest_job(&cloned_client, cloned_cache);
+        start_background_ingest_job(duration, &cloned_client, cloned_cache);
     }
 }
 
