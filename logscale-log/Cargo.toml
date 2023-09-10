@@ -15,6 +15,8 @@ log = {version = "0.4.19", features = ["std", "kv_unstable_serde"]}
 logscale-client = {path = "../logscale-client", version = "0.1.0"}
 structured-logger = "1.0.3"
 tokio = { version = "1", features = ["full"] }
+serde_json = "1.0.106"
+serde = { version = "1.0.182", features = ["derive"] }
 
 [[example]]
 name = "log_simple"

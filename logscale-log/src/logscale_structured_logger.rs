@@ -10,6 +10,7 @@ use logscale_client::{
     client::LogScaleClient,
     models::structured_logging::{StructuredLogEvent, StructuredLogsIngestRequest},
 };
+use serde_json::json;
 use structured_logger::{Builder, Writer};
 
 use crate::{ingest_job::start_background_ingest_job, log_events_cache::LogsEventCache};
@@ -106,7 +107,7 @@ impl Writer for LogScaleStructuredLogger {
 
         let log_event = StructuredLogEvent {
             timestamp: now_unix_timestamp,
-            attributes,
+            attributes: json!(attributes),
         };
 
         match self.options.ingest_policy {
