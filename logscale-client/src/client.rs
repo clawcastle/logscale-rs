@@ -2,7 +2,7 @@ use std::error::Error;
 
 use reqwest::{Client, StatusCode, Url};
 
-use crate::models::structured_data::{IngestStructuredDataError, StructuredLogsIngestRequest};
+use crate::models::structured_logging::{IngestStructuredDataError, StructuredLogsIngestRequest};
 
 #[derive(Clone)]
 pub struct LogScaleClient {

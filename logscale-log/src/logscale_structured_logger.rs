@@ -8,7 +8,7 @@ use std::{
 
 use logscale_client::{
     client::LogScaleClient,
-    models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest},
+    models::structured_logging::{StructuredLogEvent, StructuredLogsIngestRequest},
 };
 use structured_logger::{Builder, Writer};
 
