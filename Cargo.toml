@@ -1,3 +1,10 @@
 [workspace]
 
 members = ["logscale-client", "logscale-log"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Anders Kloborg (anderskloborg@gmail.com)"]
+edition = "2021"
+repository = "https://github.com/sunero4/logscale-rs"
+license-file = "LICENSE"

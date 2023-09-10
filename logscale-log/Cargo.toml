@@ -1,7 +1,11 @@
 [package]
 name = "logscale-log"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+description = "A log implementation ingesting logs into Falcon LogScale using the logscale-client package."
+documentation = "https://docs.rs/logscale-log"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
