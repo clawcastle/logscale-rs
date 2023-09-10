@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use logscale_rs::{
+use logscale_client::{
     client::LogScaleClient,
     models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest},
 };
@@ -35,7 +35,7 @@ pub fn start_background_ingest_job(
                         if c.is_empty() {
                             continue;
                         }
-    
+
                         events = c.get_log_events();
                     }
                 }

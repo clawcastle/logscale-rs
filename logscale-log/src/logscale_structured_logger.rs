@@ -3,10 +3,13 @@ use std::{
     collections::HashMap,
     error::Error,
     sync::{Arc, Mutex},
-    time::{SystemTime, UNIX_EPOCH, Duration},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use logscale_rs::{client::LogScaleClient, models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest}};
+use logscale_client::{
+    client::LogScaleClient,
+    models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest},
+};
 use structured_logger::{Builder, Writer};
 
 use crate::{ingest_job::start_background_ingest_job, log_events_cache::LogsEventCache};
@@ -14,12 +17,12 @@ use crate::{ingest_job::start_background_ingest_job, log_events_cache::LogsEvent
 #[derive(Clone, Copy)]
 pub enum StructuredLoggerIngestPolicy {
     Immediately,
-    Periodically(Duration)
+    Periodically(Duration),
 }
 
 #[derive(Clone, Copy)]
 pub struct StructuredLoggerOptions {
-    pub ingest_policy: StructuredLoggerIngestPolicy
+    pub ingest_policy: StructuredLoggerIngestPolicy,
 }
 
 impl StructuredLoggerOptions {
@@ -30,7 +33,9 @@ impl StructuredLoggerOptions {
 
 impl Default for StructuredLoggerOptions {
     fn default() -> Self {
-        Self { ingest_policy: StructuredLoggerIngestPolicy::Periodically(Duration::from_secs(5)) }
+        Self {
+            ingest_policy: StructuredLoggerIngestPolicy::Periodically(Duration::from_secs(5)),
+        }
     }
 }
 
@@ -41,11 +46,16 @@ pub struct LogScaleStructuredLogger {
 }
 
 impl LogScaleStructuredLogger {
-    pub fn init(url: String, ingest_token: String, options: StructuredLoggerOptions) -> Result<(), Box<dyn Error>> {
+    pub fn init(
+        url: String,
+        ingest_token: String,
+        options: StructuredLoggerOptions,
+    ) -> Result<(), Box<dyn Error>> {
         let logscale_logger = LogScaleStructuredLogger::create(&url, &ingest_token, options)?;
 
-
-        if let StructuredLoggerIngestPolicy::Periodically(duration) = logscale_logger.options.ingest_policy {
+        if let StructuredLoggerIngestPolicy::Periodically(duration) =
+            logscale_logger.options.ingest_policy
+        {
             logscale_logger.start_periodic_sync(duration);
         }
 
@@ -56,7 +66,11 @@ impl LogScaleStructuredLogger {
         Ok(())
     }
 
-    fn create(url: &str, ingest_token: &str, options: StructuredLoggerOptions) -> Result<Self, Box<dyn Error>> {
+    fn create(
+        url: &str,
+        ingest_token: &str,
+        options: StructuredLoggerOptions,
+    ) -> Result<Self, Box<dyn Error>> {
         let client = LogScaleClient::from_url(url, String::from(ingest_token))?;
 
         Ok(Self {
@@ -97,23 +111,24 @@ impl Writer for LogScaleStructuredLogger {
 
         match self.options.ingest_policy {
             StructuredLoggerIngestPolicy::Immediately => {
-                let events = [log_event.clone()];
                 let client = self.client.clone();
 
                 tokio::spawn(async move {
-                    let _ = client.ingest_structured(&[StructuredLogsIngestRequest {
-                        tags: HashMap::new(),
-                        events: &events,
-                    }]).await;
+                    let _ = client
+                        .ingest_structured(&[StructuredLogsIngestRequest {
+                            tags: HashMap::new(),
+                            events: &[log_event],
+                        }])
+                        .await;
                 });
             }
             StructuredLoggerIngestPolicy::Periodically(_) => {
                 if let Ok(mut cache) = self.log_events_cache.lock() {
                     let cache = cache.get_mut();
-        
+
                     cache.add_log_event(log_event);
                 }
-            },
+            }
         }
 
         Ok(())

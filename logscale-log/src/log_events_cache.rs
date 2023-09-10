@@ -1,4 +1,4 @@
-use logscale_rs::models::structured_data::StructuredLogEvent;
+use logscale_client::models::structured_data::StructuredLogEvent;
 
 pub struct LogsEventCache {
     cached_log_events: Vec<StructuredLogEvent>,

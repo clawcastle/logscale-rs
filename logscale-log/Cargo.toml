@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 log = {version = "0.4.19", features = ["std", "kv_unstable_serde"]}
-logscale-rs = {path = "../logscale-rs"}
+logscale-client = {path = "../logscale-client"}
 structured-logger = "1.0.3"
 tokio = { version = "1", features = ["full"] }
 

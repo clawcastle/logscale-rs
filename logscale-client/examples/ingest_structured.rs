@@ -7,7 +7,7 @@ use std::{
     vec,
 };
 
-use logscale_rs::{
+use logscale_client::{
     client::LogScaleClient,
     models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest},
 };
