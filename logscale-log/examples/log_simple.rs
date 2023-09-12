@@ -27,7 +27,7 @@ async fn main() {
 
     log::set_max_level(log::LevelFilter::Trace);
 
-    let nested = Nested {x: 42, y: String::from("jaaa")};
+    let nested = Nested {x: 42, y: String::from("some string parameter.")};
     let mut count = 0;
     
     // Loop to let the background sync task have time to do its thing.
