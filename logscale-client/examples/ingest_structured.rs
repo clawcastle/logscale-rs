@@ -29,9 +29,11 @@ async fn main() {
         .unwrap()
         .as_millis();
 
+    let attributes = serde_json::to_value(HashMap::<String,String>::new()).unwrap();
+
     let events: Vec<StructuredLogEvent> = vec![StructuredLogEvent {
         timestamp: now_unix_timestamp,
-        attributes: HashMap::new(),
+        attributes,
     }];
 
     let request = StructuredLogsIngestRequest {

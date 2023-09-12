@@ -10,7 +10,6 @@ use logscale_client::{
     client::LogScaleClient,
     models::structured_logging::{StructuredLogEvent, StructuredLogsIngestRequest},
 };
-use serde_json::json;
 use structured_logger::{Builder, Writer};
 
 use crate::{ingest_job::start_background_ingest_job, log_events_cache::LogsEventCache};
@@ -94,11 +93,7 @@ impl Writer for LogScaleStructuredLogger {
         &self,
         value: &std::collections::BTreeMap<log::kv::Key, log::kv::Value>,
     ) -> Result<(), std::io::Error> {
-        let mut attributes = HashMap::with_capacity(value.len());
-
-        for (key, val) in value {
-            attributes.insert(key.to_string(), val.to_string());
-        }
+        let attributes = serde_json::to_value(value)?;
 
         let now_unix_timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -107,7 +102,7 @@ impl Writer for LogScaleStructuredLogger {
 
         let log_event = StructuredLogEvent {
             timestamp: now_unix_timestamp,
-            attributes: json!(attributes),
+            attributes,
         };
 
         match self.options.ingest_policy {

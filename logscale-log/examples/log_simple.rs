@@ -29,12 +29,18 @@ async fn main() {
 
     let mut count = 0;
 
-    let nested = Nested {x: 42, y: String::from("jaaa")};
-
+    let kv = Nested {x: 42, y: String::from("jaaa")};
     
     // Loop to let the background sync task have time to do its thing.
     loop {
-        info!(kv = log::as_serde!(nested); "Log with kv parameter");
+        info!(target: "api",
+        method = "GET",
+        path = "/hello",
+        status = 200_u16,
+        elapsed = 10_u64,
+        kv = log::as_serde!(kv);
+        "",
+    );
         count += 1;
         std::thread::sleep(Duration::from_secs(1));
     }

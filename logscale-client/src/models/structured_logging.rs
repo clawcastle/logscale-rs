@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use reqwest::StatusCode;
 use serde::Serialize;
+use serde_json::value::Value as JsonValue;
 
 #[derive(Serialize)]
 pub struct StructuredLogsIngestRequest<'a> {
@@ -12,7 +13,7 @@ pub struct StructuredLogsIngestRequest<'a> {
 #[derive(Serialize, Clone)]
 pub struct StructuredLogEvent {
     pub timestamp: u128,
-    pub attributes: HashMap<String, String>,
+    pub attributes: JsonValue,
 }
 
 #[derive(Debug)]
