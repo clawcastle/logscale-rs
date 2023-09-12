@@ -31,10 +31,7 @@ async fn main() {
 
     let attributes = serde_json::to_value(HashMap::<String,String>::new()).unwrap();
 
-    let events: Vec<StructuredLogEvent> = vec![StructuredLogEvent {
-        timestamp: now_unix_timestamp,
-        attributes,
-    }];
+    let events: Vec<StructuredLogEvent> = vec![StructuredLogEvent::new(now_unix_timestamp, attributes)];
 
     let request = StructuredLogsIngestRequest {
         events: &events,

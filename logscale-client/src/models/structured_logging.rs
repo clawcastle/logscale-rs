@@ -16,6 +16,12 @@ pub struct StructuredLogEvent {
     pub attributes: JsonValue,
 }
 
+impl StructuredLogEvent {
+    pub fn new(timestamp: u128, attributes: JsonValue) -> Self {
+        Self { timestamp, attributes }
+    }
+}
+
 #[derive(Debug)]
 pub enum IngestStructuredDataError {
     FailedSendingRequest,
