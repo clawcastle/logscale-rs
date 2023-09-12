@@ -100,11 +100,8 @@ impl Writer for LogScaleStructuredLogger {
             .unwrap()
             .as_millis();
 
-        let log_event = StructuredLogEvent {
-            timestamp: now_unix_timestamp,
-            attributes,
-        };
-
+        let log_event = StructuredLogEvent::new(now_unix_timestamp, attributes);
+        
         match self.options.ingest_policy {
             StructuredLoggerIngestPolicy::Immediately => {
                 let client = self.client.clone();
