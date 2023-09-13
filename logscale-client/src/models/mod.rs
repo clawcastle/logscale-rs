@@ -1,1 +1,1 @@
-pub mod structured_data;
+pub mod structured_logging;

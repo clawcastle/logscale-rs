@@ -8,7 +8,7 @@ use std::{
 
 use logscale_client::{
     client::LogScaleClient,
-    models::structured_data::{StructuredLogEvent, StructuredLogsIngestRequest},
+    models::structured_logging::{StructuredLogEvent, StructuredLogsIngestRequest},
 };
 use structured_logger::{Builder, Writer};
 
@@ -93,22 +93,15 @@ impl Writer for LogScaleStructuredLogger {
         &self,
         value: &std::collections::BTreeMap<log::kv::Key, log::kv::Value>,
     ) -> Result<(), std::io::Error> {
-        let mut attributes = HashMap::with_capacity(value.len());
-
-        for (key, val) in value {
-            attributes.insert(key.to_string(), val.to_string());
-        }
+        let attributes = serde_json::to_value(value)?;
 
         let now_unix_timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis();
 
-        let log_event = StructuredLogEvent {
-            timestamp: now_unix_timestamp,
-            attributes,
-        };
-
+        let log_event = StructuredLogEvent::new(now_unix_timestamp, attributes);
+        
         match self.options.ingest_policy {
             StructuredLoggerIngestPolicy::Immediately => {
                 let client = self.client.clone();
