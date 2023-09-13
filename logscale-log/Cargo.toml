@@ -3,7 +3,7 @@ name = "logscale-log"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license-file.workspace = true
+license.workspace = true
 readme.workspace = true
 description = "A log implementation ingesting logs into Falcon LogScale using the logscale-client package."
 documentation = "https://docs.rs/logscale-log"
@@ -13,7 +13,7 @@ repository = "https://github.com/sunero4/logscale-rs"
 
 [dependencies]
 log = {version = "0.4.19", features = ["std", "kv_unstable_serde"]}
-logscale-client = {path = "../logscale-client", version = "0.1.0"}
+logscale-client = {path = "../logscale-client", version = "0.1.1"}
 structured-logger = "1.0.3"
 tokio = { version = "1", features = ["full"] }
 serde_json = "1.0.106"
