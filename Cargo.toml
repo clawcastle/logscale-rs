@@ -8,3 +8,4 @@ authors = ["Anders Kloborg (anderskloborg@gmail.com)"]
 edition = "2021"
 repository = "https://github.com/sunero4/logscale-rs"
 license = "MIT"
+readme = "README.md"
