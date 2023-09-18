@@ -60,7 +60,7 @@ impl LogScaleClient {
 
     pub async fn ingest_unstructured<'a>(
         &self,
-        request: &UnstructuredLogsIngestRequest<'a>,
+        request: &[UnstructuredLogsIngestRequest<'a>],
     ) -> Result<(), LogScaleError> {
         let url = self
             .logscale_url
