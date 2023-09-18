@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use reqwest::StatusCode;
 use serde::Serialize;
 use serde_json::value::Value as JsonValue;
 
@@ -18,12 +17,9 @@ pub struct StructuredLogEvent {
 
 impl StructuredLogEvent {
     pub fn new(timestamp: u128, attributes: JsonValue) -> Self {
-        Self { timestamp, attributes }
+        Self {
+            timestamp,
+            attributes,
+        }
     }
-}
-
-#[derive(Debug)]
-pub enum IngestStructuredDataError {
-    FailedSendingRequest,
-    RequestStatusCodeDidNotIndicateSuccess(StatusCode),
 }
