@@ -1,5 +1,4 @@
 use std::{
-    cell::RefCell,
     collections::HashMap,
     error::Error,
     sync::{Arc, Mutex},
@@ -12,16 +11,88 @@ use logscale_client::{
 };
 use structured_logger::{Builder, Writer};
 
-use crate::{
-    ingest_job::start_background_ingest_job,
-    log_events_cache::LogsEventCache,
-    options::{LoggerIngestPolicy, LoggerOptions},
-};
+use crate::options::{LoggerIngestPolicy, LoggerOptions};
+
+type PendingEvents = Arc<Mutex<Vec<StructuredLogEvent>>>;
+
+struct StructuredLogIngester {
+    client: LogScaleClient,
+    pending_events: PendingEvents,
+    ingest_policy: LoggerIngestPolicy,
+}
+
+impl StructuredLogIngester {
+    pub fn new(client: LogScaleClient, ingest_policy: LoggerIngestPolicy) -> Self {
+        Self {
+            client,
+            pending_events: Arc::from(Mutex::new(Vec::new())),
+            ingest_policy,
+        }
+    }
+
+    pub fn ingest_log_event(&self, log_event: StructuredLogEvent) {
+        match self.ingest_policy {
+            LoggerIngestPolicy::Immediately => {
+                let client = self.client.clone();
+
+                tokio::spawn(async move {
+                    let _ = client
+                        .ingest_structured(&[StructuredLogsIngestRequest {
+                            tags: HashMap::new(),
+                            events: &[log_event],
+                        }])
+                        .await;
+                });
+            }
+            LoggerIngestPolicy::Periodically(_) => {
+                if let Ok(mut pending_events) = self.pending_events.lock() {
+                    pending_events.push(log_event);
+                }
+            }
+        }
+    }
+
+    fn start_background_ingest_job(&mut self, duration: Duration) {
+        let client = self.client.clone();
+        let pending_events = Arc::clone(&self.pending_events);
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(duration);
+
+            interval.tick().await;
+
+            loop {
+                interval.tick().await;
+
+                let mut events: Vec<StructuredLogEvent> = Vec::new();
+
+                {
+                    if let Ok(pending_events) = pending_events.lock() {
+                        if pending_events.is_empty() {
+                            continue;
+                        }
+
+                        events = pending_events.iter().cloned().collect();
+                    }
+                }
+
+                let request = StructuredLogsIngestRequest {
+                    events: &events,
+                    tags: HashMap::new(),
+                };
+                if client.ingest_structured(&[request]).await.is_ok() {
+                    if let Ok(mut pending_events) = pending_events.lock() {
+                        pending_events.clear();
+                    }
+                }
+            }
+        });
+    }
+}
 
 pub struct LogScaleStructuredLogger {
-    client: LogScaleClient,
+    log_ingester: StructuredLogIngester,
     options: LoggerOptions,
-    log_events_cache: Arc<Mutex<RefCell<LogsEventCache>>>,
 }
 
 impl LogScaleStructuredLogger {
@@ -30,10 +101,12 @@ impl LogScaleStructuredLogger {
         ingest_token: String,
         options: LoggerOptions,
     ) -> Result<(), Box<dyn Error>> {
-        let logscale_logger = LogScaleStructuredLogger::create(&url, &ingest_token, options)?;
+        let mut logscale_logger = LogScaleStructuredLogger::create(&url, &ingest_token, options)?;
 
         if let LoggerIngestPolicy::Periodically(duration) = logscale_logger.options.ingest_policy {
-            logscale_logger.start_periodic_sync(duration);
+            logscale_logger
+                .log_ingester
+                .start_background_ingest_job(duration);
         }
 
         Builder::new()
@@ -50,18 +123,12 @@ impl LogScaleStructuredLogger {
     ) -> Result<Self, Box<dyn Error>> {
         let client = LogScaleClient::from_url(url, String::from(ingest_token))?;
 
+        let log_ingester = StructuredLogIngester::new(client, options.ingest_policy);
+
         Ok(Self {
-            client,
+            log_ingester,
             options,
-            log_events_cache: Arc::from(Mutex::from(RefCell::new(LogsEventCache::new()))),
         })
-    }
-
-    fn start_periodic_sync(&self, duration: Duration) {
-        let cloned_client = self.client.clone();
-        let cloned_cache = Arc::clone(&self.log_events_cache);
-
-        start_background_ingest_job(duration, &cloned_client, cloned_cache);
     }
 }
 
@@ -79,27 +146,7 @@ impl Writer for LogScaleStructuredLogger {
 
         let log_event = StructuredLogEvent::new(now_unix_timestamp, attributes);
 
-        match self.options.ingest_policy {
-            LoggerIngestPolicy::Immediately => {
-                let client = self.client.clone();
-
-                tokio::spawn(async move {
-                    let _ = client
-                        .ingest_structured(&[StructuredLogsIngestRequest {
-                            tags: HashMap::new(),
-                            events: &[log_event],
-                        }])
-                        .await;
-                });
-            }
-            LoggerIngestPolicy::Periodically(_) => {
-                if let Ok(mut cache) = self.log_events_cache.lock() {
-                    let cache = cache.get_mut();
-
-                    cache.add_log_event(log_event);
-                }
-            }
-        }
+        self.log_ingester.ingest_log_event(log_event);
 
         Ok(())
     }
