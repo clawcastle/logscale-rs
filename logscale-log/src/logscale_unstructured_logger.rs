@@ -6,7 +6,10 @@ use std::{
 };
 
 use log::Log;
-use logscale_client::{client::LogScaleClient, models::ingest::UnstructuredLogsIngestRequest};
+use logscale_client::{
+    client::LogScaleClient,
+    models::ingest::{UnstructuredLogEvent, UnstructuredLogsIngestRequest},
+};
 
 use crate::{
     ingest_job::start_background_ingest_job,
@@ -65,16 +68,14 @@ impl Log for LogScaleUnstructuredLogger {
     fn log(&self, record: &log::Record) {
         match self.options.ingest_policy {
             LoggerIngestPolicy::Immediately => {
-                if let Some(log_message) = record.args().as_str() {
-                    let client = self.client.clone();
-                    tokio::spawn(async move {
-                        let request_content = [log_message];
-                        let request =
-                            UnstructuredLogsIngestRequest::from_log_events(&request_content);
+                let log_message = record.args().to_string();
+                let client = self.client.clone();
+                tokio::spawn(async move {
+                    let request_content: [UnstructuredLogEvent; 1] = [log_message.into()];
+                    let request = UnstructuredLogsIngestRequest::from_log_events(&request_content);
 
-                        let _ = client.ingest_unstructured(&[request]).await;
-                    });
-                }
+                    let _ = client.ingest_unstructured(&[request]).await;
+                });
             }
             LoggerIngestPolicy::Periodically(_) => todo!(),
         }

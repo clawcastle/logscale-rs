@@ -9,7 +9,7 @@ use std::{
 
 use logscale_client::{
     client::LogScaleClient,
-    models::structured_logging::{StructuredLogEvent, StructuredLogsIngestRequest},
+    models::ingest::{StructuredLogEvent, StructuredLogsIngestRequest},
 };
 
 #[tokio::main]
@@ -29,9 +29,10 @@ async fn main() {
         .unwrap()
         .as_millis();
 
-    let attributes = serde_json::to_value(HashMap::<String,String>::new()).unwrap();
+    let attributes = serde_json::to_value(HashMap::<String, String>::new()).unwrap();
 
-    let events: Vec<StructuredLogEvent> = vec![StructuredLogEvent::new(now_unix_timestamp, attributes)];
+    let events: Vec<StructuredLogEvent> =
+        vec![StructuredLogEvent::new(now_unix_timestamp, attributes)];
 
     let request = StructuredLogsIngestRequest {
         events: &events,
