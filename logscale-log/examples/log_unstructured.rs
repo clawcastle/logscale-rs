@@ -5,12 +5,6 @@ use logscale_log::{
     logscale_unstructured_logger::LogScaleUnstructuredLogger, options::LoggerOptions,
 };
 
-#[derive(serde::Serialize)]
-struct Nested {
-    x: i32,
-    y: String,
-}
-
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
