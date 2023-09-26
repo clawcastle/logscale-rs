@@ -1,27 +1,30 @@
 use std::{
-    collections::HashMap,
     error::Error,
     sync::{Arc, Mutex},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
-
-use logscale_client::{
-    client::LogScaleClient,
-    models::ingest::{StructuredLogEvent, StructuredLogsIngestRequest},
-};
-use structured_logger::{Builder, Writer};
 
 use crate::options::{LoggerIngestPolicy, LoggerOptions};
+use log::Log;
+use logscale_client::{
+    client::LogScaleClient,
+    models::ingest::{UnstructuredLogEvent, UnstructuredLogsIngestRequest},
+};
 
-type PendingEvents = Arc<Mutex<Vec<StructuredLogEvent>>>;
+pub struct LogScaleUnstructuredLogger {
+    log_ingester: UnstructuredLogIngester,
+    options: LoggerOptions,
+}
 
-struct StructuredLogIngester {
+type PendingEvents = Arc<Mutex<Vec<UnstructuredLogEvent>>>;
+
+struct UnstructuredLogIngester {
     client: LogScaleClient,
     pending_events: PendingEvents,
     ingest_policy: LoggerIngestPolicy,
 }
 
-impl StructuredLogIngester {
+impl UnstructuredLogIngester {
     pub fn new(client: LogScaleClient, ingest_policy: LoggerIngestPolicy) -> Self {
         Self {
             client,
@@ -30,18 +33,15 @@ impl StructuredLogIngester {
         }
     }
 
-    pub fn ingest_log_event(&self, log_event: StructuredLogEvent) {
+    pub fn ingest_log_event(&self, log_event: UnstructuredLogEvent) {
         match self.ingest_policy {
             LoggerIngestPolicy::Immediately => {
                 let client = self.client.clone();
-
                 tokio::spawn(async move {
-                    let _ = client
-                        .ingest_structured(&[StructuredLogsIngestRequest {
-                            tags: HashMap::new(),
-                            events: &[log_event],
-                        }])
-                        .await;
+                    let request_content = [log_event];
+                    let request = UnstructuredLogsIngestRequest::from_log_events(&request_content);
+
+                    let _ = client.ingest_unstructured(&[request]).await;
                 });
             }
             LoggerIngestPolicy::Periodically(_) => {
@@ -64,7 +64,7 @@ impl StructuredLogIngester {
             loop {
                 interval.tick().await;
 
-                let mut events: Vec<StructuredLogEvent> = Vec::new();
+                let mut events: Vec<UnstructuredLogEvent> = Vec::new();
 
                 {
                     if let Ok(pending_events) = pending_events.lock() {
@@ -76,11 +76,8 @@ impl StructuredLogIngester {
                     }
                 }
 
-                let request = StructuredLogsIngestRequest {
-                    events: &events,
-                    tags: HashMap::new(),
-                };
-                if client.ingest_structured(&[request]).await.is_ok() {
+                let request = UnstructuredLogsIngestRequest::from_log_events(&events);
+                if client.ingest_unstructured(&[request]).await.is_ok() {
                     if let Ok(mut pending_events) = pending_events.lock() {
                         pending_events.clear();
                     }
@@ -90,18 +87,13 @@ impl StructuredLogIngester {
     }
 }
 
-pub struct LogScaleStructuredLogger {
-    log_ingester: StructuredLogIngester,
-    options: LoggerOptions,
-}
-
-impl LogScaleStructuredLogger {
+impl LogScaleUnstructuredLogger {
     pub fn init(
         url: String,
         ingest_token: String,
         options: LoggerOptions,
     ) -> Result<(), Box<dyn Error>> {
-        let mut logscale_logger = LogScaleStructuredLogger::create(&url, &ingest_token, options)?;
+        let mut logscale_logger = LogScaleUnstructuredLogger::create(&url, &ingest_token, options)?;
 
         if let LoggerIngestPolicy::Periodically(duration) = logscale_logger.options.ingest_policy {
             logscale_logger
@@ -109,9 +101,7 @@ impl LogScaleStructuredLogger {
                 .start_background_ingest_job(duration);
         }
 
-        Builder::new()
-            .with_default_writer(Box::from(logscale_logger))
-            .init();
+        log::set_boxed_logger(Box::from(logscale_logger))?;
 
         Ok(())
     }
@@ -123,7 +113,7 @@ impl LogScaleStructuredLogger {
     ) -> Result<Self, Box<dyn Error>> {
         let client = LogScaleClient::from_url(url, String::from(ingest_token))?;
 
-        let log_ingester = StructuredLogIngester::new(client, options.ingest_policy);
+        let log_ingester = UnstructuredLogIngester::new(client, options.ingest_policy);
 
         Ok(Self {
             log_ingester,
@@ -132,22 +122,16 @@ impl LogScaleStructuredLogger {
     }
 }
 
-impl Writer for LogScaleStructuredLogger {
-    fn write_log(
-        &self,
-        value: &std::collections::BTreeMap<log::kv::Key, log::kv::Value>,
-    ) -> Result<(), std::io::Error> {
-        let attributes = serde_json::to_value(value)?;
+impl Log for LogScaleUnstructuredLogger {
+    fn enabled(&self, _: &log::Metadata) -> bool {
+        true
+    }
 
-        let now_unix_timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-
-        let log_event = StructuredLogEvent::new(now_unix_timestamp, attributes);
+    fn log(&self, record: &log::Record) {
+        let log_event: UnstructuredLogEvent = record.args().to_string().into();
 
         self.log_ingester.ingest_log_event(log_event);
-
-        Ok(())
     }
+
+    fn flush(&self) {}
 }

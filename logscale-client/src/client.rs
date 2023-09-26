@@ -3,8 +3,8 @@ use std::error::Error;
 use reqwest::{Client, StatusCode, Url};
 
 use crate::models::{
-    errors::LogScaleError, structured_logging::StructuredLogsIngestRequest,
-    unstructured_logging::UnstructuredLogsIngestRequest,
+    errors::LogScaleError, ingest::StructuredLogsIngestRequest,
+    ingest::UnstructuredLogsIngestRequest,
 };
 
 #[derive(Clone)]

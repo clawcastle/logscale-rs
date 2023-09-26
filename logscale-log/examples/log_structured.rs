@@ -1,7 +1,7 @@
 use std::{env, time::Duration};
 
 use log::{info, error};
-use logscale_log::logscale_structured_logger::{LogScaleStructuredLogger, StructuredLoggerOptions};
+use logscale_log::{logscale_structured_logger::LogScaleStructuredLogger, options::LoggerOptions};
 
 #[derive(serde::Serialize)]
 struct Nested {
@@ -21,7 +21,7 @@ async fn main() {
     LogScaleStructuredLogger::init(
         String::from("https://cloud.community.humio.com"),
         ingest_token,
-        StructuredLoggerOptions::default()
+        LoggerOptions::default()
     )
     .unwrap();
 
