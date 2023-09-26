@@ -21,5 +21,10 @@ serde = { version = "1.0.182", features = ["derive"] }
 async-trait = "0.1.73"
 
 [[example]]
-name = "log_simple"
-path = "examples/log_simple.rs"
+name = "log_structured"
+path = "examples/log_structured.rs"
+
+
+[[example]]
+name = "log_unstructured"
+path = "examples/log_unstructured.rs"
