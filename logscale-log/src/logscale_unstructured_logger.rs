@@ -1,9 +1,18 @@
-use std::{error::Error, sync::{Arc, Mutex}, cell::RefCell, time::Duration};
+use std::{
+    cell::RefCell,
+    error::Error,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use log::Log;
-use logscale_client::{client::LogScaleClient, models::unstructured_logging::UnstructuredLogsIngestRequest};
+use logscale_client::{client::LogScaleClient, models::ingest::UnstructuredLogsIngestRequest};
 
-use crate::{options::{LoggerIngestPolicy, LoggerOptions}, log_events_cache::LogsEventCache, ingest_job::start_background_ingest_job};
+use crate::{
+    ingest_job::start_background_ingest_job,
+    log_events_cache::LogsEventCache,
+    options::{LoggerIngestPolicy, LoggerOptions},
+};
 
 pub struct LogScaleUnstructuredLogger {
     client: LogScaleClient,
@@ -19,9 +28,7 @@ impl LogScaleUnstructuredLogger {
     ) -> Result<(), Box<dyn Error>> {
         let logscale_logger = LogScaleUnstructuredLogger::create(&url, &ingest_token, options)?;
 
-        if let LoggerIngestPolicy::Periodically(duration) =
-            logscale_logger.options.ingest_policy
-        {
+        if let LoggerIngestPolicy::Periodically(duration) = logscale_logger.options.ingest_policy {
             logscale_logger.start_periodic_sync(duration);
         }
 
@@ -62,18 +69,16 @@ impl Log for LogScaleUnstructuredLogger {
                     let client = self.client.clone();
                     tokio::spawn(async move {
                         let request_content = [log_message];
-                        let request = UnstructuredLogsIngestRequest::from_log_events(&request_content);
-    
+                        let request =
+                            UnstructuredLogsIngestRequest::from_log_events(&request_content);
+
                         let _ = client.ingest_unstructured(&[request]).await;
                     });
                 }
-
-            },
+            }
             LoggerIngestPolicy::Periodically(_) => todo!(),
         }
     }
 
-    fn flush(&self) {
-        
-    }
+    fn flush(&self) {}
 }

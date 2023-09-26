@@ -8,11 +8,15 @@ use std::{
 
 use logscale_client::{
     client::LogScaleClient,
-    models::structured_logging::{StructuredLogEvent, StructuredLogsIngestRequest},
+    models::ingest::{StructuredLogEvent, StructuredLogsIngestRequest},
 };
 use structured_logger::{Builder, Writer};
 
-use crate::{ingest_job::start_background_ingest_job, log_events_cache::LogsEventCache, options::{LoggerIngestPolicy, LoggerOptions}};
+use crate::{
+    ingest_job::start_background_ingest_job,
+    log_events_cache::LogsEventCache,
+    options::{LoggerIngestPolicy, LoggerOptions},
+};
 
 pub struct LogScaleStructuredLogger {
     client: LogScaleClient,
@@ -28,9 +32,7 @@ impl LogScaleStructuredLogger {
     ) -> Result<(), Box<dyn Error>> {
         let logscale_logger = LogScaleStructuredLogger::create(&url, &ingest_token, options)?;
 
-        if let LoggerIngestPolicy::Periodically(duration) =
-            logscale_logger.options.ingest_policy
-        {
+        if let LoggerIngestPolicy::Periodically(duration) = logscale_logger.options.ingest_policy {
             logscale_logger.start_periodic_sync(duration);
         }
 
@@ -76,7 +78,7 @@ impl Writer for LogScaleStructuredLogger {
             .as_millis();
 
         let log_event = StructuredLogEvent::new(now_unix_timestamp, attributes);
-        
+
         match self.options.ingest_policy {
             LoggerIngestPolicy::Immediately => {
                 let client = self.client.clone();
