@@ -10,7 +10,6 @@ use crate::models::{
 #[derive(Clone)]
 pub struct LogScaleClient {
     logscale_url: Url,
-    ingest_token: String,
     http_client: Client,
     ingest_token_header_value: String,
 }
@@ -21,7 +20,6 @@ impl LogScaleClient {
 
         Ok(Self {
             logscale_url: url,
-            ingest_token: ingest_token.clone(),
             http_client: Client::default(),
             ingest_token_header_value: format!("Bearer {}", &ingest_token),
         })

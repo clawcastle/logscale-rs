@@ -12,13 +12,13 @@ repository = "https://github.com/sunero4/logscale-rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = {version = "0.4.19", features = ["std", "kv_unstable_serde"]}
+log = {version = "0.4", features = ["std", "kv_unstable_serde"]}
 logscale-client = {path = "../logscale-client", version = "0.1.2"}
-structured-logger = "1.0.3"
+structured-logger = "1.0"
 tokio = { version = "1", features = ["full"] }
-serde_json = "1.0.106"
-serde = { version = "1.0.182", features = ["derive"] }
-async-trait = "0.1.73"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+async-trait = "0.1"
 
 [[example]]
 name = "log_structured"
