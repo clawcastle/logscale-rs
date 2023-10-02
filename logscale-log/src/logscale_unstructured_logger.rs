@@ -41,7 +41,9 @@ impl UnstructuredLogIngester {
                     let request_content = [log_event];
                     let request = UnstructuredLogsIngestRequest::from_log_events(&request_content);
 
-                    let _ = client.ingest_unstructured(&[request]).await;
+                    if client.ingest_unstructured(&[request]).await.is_err() {
+                        eprintln!("An error occurred while trying to ingest logs to Falcon LogScale.");
+                    }
                 });
             }
             LoggerIngestPolicy::Periodically(_) => {
@@ -81,6 +83,8 @@ impl UnstructuredLogIngester {
                     if let Ok(mut pending_events) = pending_events.lock() {
                         pending_events.clear();
                     }
+                } else {
+                    eprintln!("An error occurred while trying to ingest logs to Falcon LogScale.");
                 }
             }
         });

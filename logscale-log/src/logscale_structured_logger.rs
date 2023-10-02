@@ -36,12 +36,14 @@ impl StructuredLogIngester {
                 let client = self.client.clone();
 
                 tokio::spawn(async move {
-                    let _ = client
+                    if client
                         .ingest_structured(&[StructuredLogsIngestRequest {
                             tags: HashMap::new(),
                             events: &[log_event],
                         }])
-                        .await;
+                        .await.is_err() {
+                            eprintln!("An error occurred while trying to ingest logs to Falcon LogScale.");
+                        }
                 });
             }
             LoggerIngestPolicy::Periodically(_) => {
@@ -84,6 +86,8 @@ impl StructuredLogIngester {
                     if let Ok(mut pending_events) = pending_events.lock() {
                         pending_events.clear();
                     }
+                } else {
+                    eprintln!("An error occurred while trying to ingest logs to Falcon LogScale.");
                 }
             }
         });
